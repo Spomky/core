@@ -118,8 +118,13 @@ final class IriConverter implements IriConverterInterface
     {
         $resourceClass = $context['force_resource_class'] ?? (\is_string($resource) ? $resource : $this->getObjectClass($resource));
 
+        $classOverridden = false;
         if ($this->operationMetadataFactory && isset($context['item_uri_template'])) {
             $operation = $this->operationMetadataFactory->create($context['item_uri_template']);
+            if ($operation !== null) {
+                $resourceClass = $operation->getClass() ?? $resourceClass;
+                $classOverridden = true;
+            }
         }
 
         $localOperationCacheKey = ($operation?->getName() ?? '').$resourceClass.((\is_string($resource) || $operation instanceof CollectionOperationInterface) ? '_c' : '_i');
@@ -132,7 +137,8 @@ final class IriConverter implements IriConverterInterface
         }
 
         // This is only for when a class (that is not a resource) extends another one that is a resource, we should remove this behavior
-        if (!\is_string($resource) && !isset($context['force_resource_class'])) {
+        // And only if the resource class is not given by the operation
+        if (!\is_string($resource) && !isset($context['force_resource_class']) && !$classOverridden) {
             $resourceClass = $this->getResourceClass($resource, true);
         }
 
